@@ -13,9 +13,11 @@ Should handle file sizes up to 2GB, and is really fast.<br>
 Pattern format is like in 010 Editor, but Cheat Engine AOBScan format is also accepted.<br>
 Replace is also a pattern, like search.<br>
 Offset means the offset compared to the beginning location, of where the pattern is found.<br>
-Offset can be negative, and is in base 10, while the patterns are in base 16.<br>
-Adding ? -s to the beginning of replace patterns is equivalent to increasing the offset.<br>
-(Adding ? -s to the beginning of search patterns is equivalent to decreasing the offset.)
+Offset can be negative, and is in base 10, while the patterns are in base 16.
+
+Has experimental memory based pattern replace feature.<br>
+Compile for 64 bits, and it will work with 64 bit processes.<br>
+Writing "proc:" in to the file field, will bring up the process list window.
 
 ---
 

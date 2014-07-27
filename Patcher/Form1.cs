@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
@@ -24,38 +25,89 @@ namespace Patcher2
 
       /*[DllImport("uxtheme.dll")]
       private static extern int SetWindowThemeAttribute(
-          IntPtr hWnd,
-          WINDOWTHEMEATTRIBUTETYPE wtype,
-          ref WTA_OPTIONS attributes,
-          uint size);
+        IntPtr hWnd,
+        WINDOWTHEMEATTRIBUTETYPE wtype,
+        ref WTA_OPTIONS attributes,
+        uint size);
 
       [StructLayout(LayoutKind.Sequential)]
       private struct WTA_OPTIONS
       {
-          public WTNCA dwFlags;
-          public WTNCA dwMask;
+        public WTNCA dwFlags;
+        public WTNCA dwMask;
       }
 
       [Flags]
       private enum WTNCA : uint
       {
-          NODRAWCAPTION = 1,
-          NODRAWICON = 2,
-          NOSYSMENU = 4,
-          NOMIRRORHELP = 8,
-          VALIDBITS = NODRAWCAPTION | NODRAWICON | NOSYSMENU | NOMIRRORHELP
+        NODRAWCAPTION = 1,
+        NODRAWICON = 2,
+        NOSYSMENU = 4,
+        NOMIRRORHELP = 8,
+        VALIDBITS = NODRAWCAPTION | NODRAWICON | NOSYSMENU | NOMIRRORHELP
       }
 
       private enum WINDOWTHEMEATTRIBUTETYPE : uint
       {
-          WTA_NONCLIENT = 1,
+        WTA_NONCLIENT = 1,
       }*/
+
+      [Flags]
+      internal enum ProcessAccessFlags : uint
+      {
+        All = 0x001F0FFF,
+        Terminate = 0x00000001,
+        CreateThread = 0x00000002,
+        VMOperation = 0x00000008,
+        VMRead = 0x00000010,
+        VMWrite = 0x00000020,
+        DupHandle = 0x00000040,
+        SetInformation = 0x00000200,
+        QueryInformation = 0x00000400,
+        Synchronize = 0x00100000
+      }
+
+      [Flags]
+      internal enum Protection : uint
+      {
+        PAGE_NOACCESS = 0x01,
+        PAGE_READONLY = 0x02,
+        PAGE_READWRITE = 0x04,
+        PAGE_WRITECOPY = 0x08,
+        PAGE_EXECUTE = 0x10,
+        PAGE_EXECUTE_READ = 0x20,
+        PAGE_EXECUTE_READWRITE = 0x40,
+        PAGE_EXECUTE_WRITECOPY = 0x80,
+        PAGE_GUARD = 0x100,
+        PAGE_NOCACHE = 0x200,
+        PAGE_WRITECOMBINE = 0x400
+      }
+
+      [DllImport("kernel32.dll")]
+      internal static extern IntPtr OpenProcess(ProcessAccessFlags dwDesiredAccess, [MarshalAs(UnmanagedType.Bool)] bool bInheritHandle, int dwProcessId);
+
+      [DllImport("kernel32.dll")]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool CloseHandle(IntPtr hProcess);
+
+      [DllImport("kernel32.dll", SetLastError = true)]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool ReadProcessMemory(IntPtr handle, IntPtr lpBaseAddress, byte[] lpBuffer, IntPtr nSize, ref int lpNumberOfBytesRead);
+
+      [DllImport("kernel32.dll", SetLastError = true)]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, IntPtr nSize, ref int lpNumberOfBytesWritten);
+
+      [DllImport("kernel32.dll", SetLastError = true)]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, IntPtr dwSize, uint flNewProtect, ref uint lpflOldProtect);
     }
 
     private const string _q = "?";
     private const string _qq = "??";
     private const string _ss = "**";
     private const string _b = ".bak";
+    private const string _p = "proc:";
     private static readonly string iam = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
 
     private static List<string[]> settings = new List<string[]>();
@@ -70,12 +122,12 @@ namespace Patcher2
 
     /*protected override CreateParams CreateParams
     {
-        get
-        {
-            CreateParams cp = base.CreateParams;
-            //cp.Style &= ~unchecked((int)0x00000080);
-            return cp;
-        }
+      get
+      {
+        CreateParams cp = base.CreateParams;
+        //cp.Style &= ~unchecked((int)0x00000080);
+        return cp;
+      }
     }*/
 
     private void Form1_Load(object sender, EventArgs e)
@@ -142,6 +194,12 @@ namespace Patcher2
         button2.Text = "Restore";
       else
         button2.Text = "Patch";
+
+      if (textBox1.Text.ToLower() != _p)
+        return;
+      Form2 form2 = new Form2();
+      form2.Prefix = _p;
+      form2.Show(this);
     }
 
     private void Form1_HelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
@@ -265,6 +323,10 @@ namespace Patcher2
       string[] svals = search.Replace(_qq, _q).Replace(_ss, _q).Split(' ');
       string[] rvals = replace.Replace(_qq, _q).Replace(_ss, _q).Split(' ');
 
+      // MemPatch! :) (Highly experimental!)
+      if (file.Length > 5 && file.Substring(0, 5).ToLower() == _p)
+        return doMemPatch(file.Split(':'), svals, off, rvals);
+
       if (!File.Exists(file))
       {
         if (isconsole == 0)
@@ -291,6 +353,61 @@ namespace Patcher2
         File.Move(file, file + _b);
       File.WriteAllBytes(file, bytes);
       return true;
+    }
+
+    private static bool doMemPatch(string[] processName, string[] svals, int offset, string[] rvals)
+    {
+      // Get process
+      Process proc;
+      if (processName.Length == 3)
+        proc = Process.GetProcessById(int.Parse(processName[2]));
+      else
+        proc = Process.GetProcessesByName(processName[1])[0];
+      IntPtr baseAddress = proc.MainModule.BaseAddress;
+      IntPtr moduleSize = (IntPtr)proc.MainModule.ModuleMemorySize;
+
+      IntPtr hProc = NativeMethods.OpenProcess(NativeMethods.ProcessAccessFlags.All, false, proc.Id);
+
+      // Read bytes
+      int bytesRead = 0;
+      byte[] bytes = new byte[moduleSize.ToInt32()];
+      if (!NativeMethods.ReadProcessMemory(hProc, baseAddress, bytes, moduleSize, ref bytesRead) || bytes == null)
+        goto badEnding;
+
+      // Search binary data for pattern
+      int[] locs = Patcher.BinaryPatternSearch(ref bytes, svals);
+      // Make sure we only have 1 match
+      if (!onlyOne(locs.Length, processName[1], String.Join(" ", svals)))
+        goto badEnding;
+      // Replace
+      int replaced = Patcher.BinaryPatternReplace(ref bytes, locs[0], rvals, offset);
+      if (replaced < 1)
+        goto badEnding;
+
+      // Write bytes
+      int bytesWritten = 0;
+      uint oldp = 0;
+      uint oldp2 = 0;
+      byte[] newbytes = new byte[rvals.Length];
+      IntPtr off = baseAddress + locs[0] + offset;
+      // Get write privileges
+      if (!NativeMethods.VirtualProtectEx(proc.Handle, off, (IntPtr)rvals.Length, (uint)NativeMethods.Protection.PAGE_EXECUTE_WRITECOPY, ref oldp))
+        goto badEnding;
+      // Do actual write
+      Array.Copy(bytes, locs[0] + offset, newbytes, 0, rvals.Length);
+      NativeMethods.WriteProcessMemory(hProc, off, newbytes, (IntPtr)rvals.Length, ref bytesWritten);
+      // Set original access rights back (we have no buisness getting errors here)
+      NativeMethods.VirtualProtectEx(proc.Handle, off, (IntPtr)rvals.Length, oldp, ref oldp2);
+      // Were we successful?
+      if (bytesWritten != rvals.Length)
+        goto badEnding;
+
+      // Happy ending. :)
+      NativeMethods.CloseHandle(hProc);
+      return true;
+    badEnding:
+      NativeMethods.CloseHandle(hProc);
+      return false;
     }
 
     private static bool onlyOne(int locs, string file, string search)
