@@ -151,9 +151,12 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>rd /s /q $(ProjectDir)obj
-move /Y $(TargetFileName) ..\Release\$(TargetName)64.exe
-move /Y $(TargetName).pdb ..\Release\$(TargetName)64.pdb
-rd /s /q ..\$(ConfigurationName)</PostBuildEvent>
+if "$(ConfigurationName)" == "Release64" (
+  cd ..
+  move /Y Release64\$(TargetFileName) Release\$(TargetName)64.exe
+  move /Y Release64\$(TargetName).pdb Release\$(TargetName)64.pdb
+  rd /s /q Release64
+)</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
