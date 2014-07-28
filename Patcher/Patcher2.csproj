@@ -153,8 +153,8 @@
     <PostBuildEvent>rd /s /q $(ProjectDir)obj
 if "$(ConfigurationName)" == "Release64" (
   cd ..
-  move /Y Release64\$(TargetFileName) Release\$(TargetName)64.exe
-  move /Y Release64\$(TargetName).pdb Release\$(TargetName)64.pdb
+  move /Y Release64\$(TargetFileName) Release\$(TargetName)_64.exe
+  move /Y Release64\$(TargetName).pdb Release\$(TargetName)_64.pdb
   rd /s /q Release64
 )</PostBuildEvent>
   </PropertyGroup>
