@@ -267,6 +267,23 @@ namespace Patcher2
             restore(settings[i][1]);
           break;
 
+        case "m":
+        case "-m":
+        case "/m":
+          if (args.Length != 5)
+            goto default;
+          if ((new FileInfo(args[3])).Length != (new FileInfo(args[4])).Length)
+          {
+            if (isconsole == 2)
+              Console.WriteLine("Not equal size!");
+            break;
+          }
+          byte[] bytes1 = File.ReadAllBytes(args[3]);
+          byte[] bytes2 = File.ReadAllBytes(args[4]);
+          File.WriteAllText(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], "Test"));
+          ret = args[2] + " written.\n";
+          break;
+
         default:
           return "Command line options:\n\n" +
                 iam + " [e [ini_file]]\n" +
@@ -274,11 +291,12 @@ namespace Patcher2
                 iam + " [x file search_pattern offset replace_pattern]\n" +
                 "\tRun patch given by arguments.\n\n" +
                 iam + " [r [ini_file]]\n" +
-                "\tRestore all files mentioned in inifile from their backups.\n";
-        //break;
+                "\tRestore all files mentioned in inifile from their backups.\n\n" +
+                iam + " [m out_ini_file original_file changed_file]\n" +
+                "\tTry to create a pattern based patch for original_file. (Don't get your hopes up.)\n";
       }
       if (patched > 0)
-        ret = "All done. Patched " + patched.ToString() + " files.\n";
+        ret = "All done. " + patched.ToString() + " patches executed.\n";
       return ret;
     }
 
