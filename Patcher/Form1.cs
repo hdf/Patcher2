@@ -20,6 +20,27 @@ namespace Patcher2
       [return: MarshalAs(UnmanagedType.Bool)]
       internal static extern bool FreeConsole();
 
+      [DllImport("user32.dll")]
+      internal static extern IntPtr GetForegroundWindow();
+
+      [DllImport("user32.dll")]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool SetForegroundWindow(IntPtr hWnd);
+
+      [DllImport("user32.dll")]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool AllowSetForegroundWindow(int dwProcessId);
+
+      [DllImport("user32.dll", SetLastError = true)]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      internal static extern bool BringWindowToTop(IntPtr hWnd);
+
+      [DllImport("user32.dll")]
+      [return: MarshalAs(UnmanagedType.Bool)]
+      public static extern bool ShowWindow(IntPtr hWnd, uint nCmdShow);
+
+      internal const uint SW_SHOW = 5;
+
       [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
       internal static extern IntPtr ExtractIcon(IntPtr hInst, string lpszExeFileName, int nIconIndex);
 
@@ -109,6 +130,7 @@ namespace Patcher2
     private const string _b = ".bak";
     private const string _p = "proc:";
     private static readonly string iam = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+    private static IntPtr consoleWindow;
 
     private static List<string[]> settings = new List<string[]>();
     private static string[] args;
@@ -213,6 +235,7 @@ namespace Patcher2
       try
       {
         NativeMethods.AttachConsole(-1);
+        consoleWindow = NativeMethods.GetForegroundWindow();
         isconsole = 2;
         Console.SetCursorPosition(0, Console.CursorTop);
         Console.Write(new String(' ', Console.WindowWidth));
@@ -229,6 +252,11 @@ namespace Patcher2
       {
         Console.WriteLine(ret);
         Console.SetCursorPosition(0, Console.CursorTop - 1);
+        // All useless on Win7
+        NativeMethods.AllowSetForegroundWindow(-1);
+        NativeMethods.ShowWindow(consoleWindow, NativeMethods.SW_SHOW);
+        NativeMethods.BringWindowToTop(consoleWindow);
+        NativeMethods.SetForegroundWindow(consoleWindow);
         SendKeys.Send("{ENTER}");
         NativeMethods.FreeConsole();
       }
@@ -272,15 +300,19 @@ namespace Patcher2
         case "/m":
           if (args.Length != 5)
             goto default;
+          if (!File.Exists(args[3]) || !File.Exists(args[4]))
+            break;
           if ((new FileInfo(args[3])).Length != (new FileInfo(args[4])).Length)
           {
             if (isconsole == 2)
               Console.WriteLine("Not equal size!");
             break;
           }
+          Spinner.Start();
           byte[] bytes1 = File.ReadAllBytes(args[3]);
           byte[] bytes2 = File.ReadAllBytes(args[4]);
           File.WriteAllText(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], "Test"));
+          Spinner.Stop();
           ret = args[2] + " written.\n";
           break;
 

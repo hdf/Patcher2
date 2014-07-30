@@ -319,6 +319,8 @@ namespace Patcher2
       string ret = "";
       for (int i = 0; i < origLines.Length; i += 3)
         ret += name + String.Format(postfix, i / 3 + 1) + nl + file + nl + origLines[i] + nl + origLines[i + 1] + nl + origLines[i + 2] + nl + nl;
+      if (ret.Length - nl.Length < 1)
+        return "";
       return ret.Substring(0, ret.Length - nl.Length);
     }
 

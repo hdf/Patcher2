@@ -4,6 +4,7 @@ Patcher2
 Small C# binary file patcher utility.<br>
 The interesting bit is the byte pattern based search and replace.<br>
 Should handle file sizes up to 2GB, and is really fast.<br>
+(A lot less fast, while making patch patterns, and only handles files of a few hundred megabytes.)<br>
 (Created for educational porpoises.)
 
 ---
