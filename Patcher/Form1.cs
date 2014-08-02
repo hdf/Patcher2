@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
@@ -129,6 +130,7 @@ namespace Patcher2
     private const string _ss = "**";
     private const string _b = ".bak";
     private const string _p = "proc:";
+    private const string gz = ".gz";
     private static readonly string iam = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
     private static IntPtr consoleWindow;
 
@@ -311,7 +313,10 @@ namespace Patcher2
           Spinner.Start();
           byte[] bytes1 = File.ReadAllBytes(args[3]);
           byte[] bytes2 = File.ReadAllBytes(args[4]);
-          File.WriteAllText(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], "Test"));
+          if (args[2].Length > gz.Length && args[2].Substring(args[2].Length - gz.Length) == gz)
+            CompressINI(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], args[3]));
+          else
+            File.WriteAllText(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], args[3]));
           Spinner.Stop();
           ret = args[2] + " written.\n";
           break;
@@ -324,7 +329,7 @@ namespace Patcher2
                 "\tRun patch given by arguments.\n\n" +
                 iam + " [r [ini_file]]\n" +
                 "\tRestore all files mentioned in inifile from their backups.\n\n" +
-                iam + " [m out_ini_file original_file changed_file]\n" +
+                iam + " [m out_ini_file[" + gz + "] original_file changed_file]\n" +
                 "\tTry to create a pattern based patch for original_file. (Don't get your hopes up.)\n";
       }
       if (patched > 0)
@@ -335,10 +340,17 @@ namespace Patcher2
     private static void GetSettings(string file)
     {
       if (!File.Exists(file))
-        return;
+        if (File.Exists(file + gz))
+          file = file + gz;
+        else
+          return;
       string[] comments = new string[] { "#", "//" };
       string[] setting = new string[5];
-      string[] lines = File.ReadAllLines(file);
+      string[] lines;
+      if (file.Substring(file.Length - gz.Length) == gz)
+        lines = ExtractINI(file);
+      else
+        lines = File.ReadAllLines(file);
 
       int c = 0;
       for (int i = 0; i < lines.Length; i++)
@@ -360,6 +372,25 @@ namespace Patcher2
           c++;
       nope: ;
       }
+    }
+
+    private static void CompressINI(string path, string iniContents)
+    {
+      byte[] bytes = new byte[iniContents.Length];
+      Buffer.BlockCopy(iniContents.ToCharArray(), 0, bytes, 0, iniContents.Length);
+      FileStream dest = File.Create(path);
+      GZipStream output = new GZipStream(dest, CompressionMode.Compress);
+      output.Write(bytes, 0, bytes.Length);
+      output.Close();
+      dest.Close();
+    }
+
+    private static string[] ExtractINI(string path)
+    {
+      MemoryStream input = new MemoryStream(File.ReadAllBytes(path));
+      MemoryStream dest = new MemoryStream();
+      (new GZipStream(input, CompressionMode.Decompress)).CopyTo(dest);
+      return System.Text.Encoding.Default.GetString(dest.ToArray()).Split(new string[] { "\r\n" }, StringSplitOptions.None);
     }
 
     private static bool doPatch(string file, string search, string offset, string replace)
