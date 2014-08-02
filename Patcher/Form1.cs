@@ -5,6 +5,7 @@ using System.Drawing;
 using System.IO;
 using System.IO.Compression;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Windows.Forms;
 
 namespace Patcher2
@@ -314,9 +315,9 @@ namespace Patcher2
           byte[] bytes1 = File.ReadAllBytes(args[3]);
           byte[] bytes2 = File.ReadAllBytes(args[4]);
           if (args[2].Length > gz.Length && args[2].Substring(args[2].Length - gz.Length) == gz)
-            CompressINI(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], args[3]));
+            CompressINI(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], "Patch"));
           else
-            File.WriteAllText(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], args[3]));
+            File.WriteAllText(args[2], Patcher.Format4Ini(Patcher.FindDiffs(ref bytes1, ref bytes2), args[3], "Patch"));
           Spinner.Stop();
           ret = args[2] + " written.\n";
           break;
@@ -376,8 +377,7 @@ namespace Patcher2
 
     private static void CompressINI(string path, string iniContents)
     {
-      byte[] bytes = new byte[iniContents.Length];
-      Buffer.BlockCopy(iniContents.ToCharArray(), 0, bytes, 0, iniContents.Length);
+      byte[] bytes = Encoding.Default.GetBytes(iniContents);
       FileStream dest = File.Create(path);
       GZipStream output = new GZipStream(dest, CompressionMode.Compress);
       output.Write(bytes, 0, bytes.Length);
@@ -390,7 +390,7 @@ namespace Patcher2
       MemoryStream input = new MemoryStream(File.ReadAllBytes(path));
       MemoryStream dest = new MemoryStream();
       (new GZipStream(input, CompressionMode.Decompress)).CopyTo(dest);
-      return System.Text.Encoding.Default.GetString(dest.ToArray()).Split(new string[] { "\r\n" }, StringSplitOptions.None);
+      return Encoding.Default.GetString(dest.ToArray()).Split(new string[] { "\r\n" }, StringSplitOptions.None);
     }
 
     private static bool doPatch(string file, string search, string offset, string replace)
