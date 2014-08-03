@@ -164,10 +164,7 @@ namespace Patcher2
         switch (state)
         {
           case 0: // In block, Does not equal, Matched 8. (Block resumes.)
-            matchCounter = 0;
-            diffLocs.Add(i);
-            diffs.Add(new string[] { bytes1[i].ToString(_h), bytes2[i].ToString(_h) });
-            break;
+            goto case 4;
 
           //case 1: // Not in block, Does not equal, Matched 8?
           //  goto default;
