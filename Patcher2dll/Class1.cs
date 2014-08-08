@@ -141,8 +141,6 @@ namespace Patcher2
       return BinaryPatternReplace(ref bytes, new int[] { loc }, new string[][] { replaceBytes }, new int[] { 0 }, _q);
     }
 
-    // Warning, this is not as smart as the Cheat Engine version, as we don't do disassembly,
-    // so we don't know which bytes are addresses, that should be masked.
     public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2)
     {
       List<string[][]> finds = new List<string[][]>();
@@ -153,7 +151,7 @@ namespace Patcher2
       int matchCounter = 0;
       int state; // We only need 3 bits.
       int loc = 0; // Funny, how the compiler thinks this is necessary, but actually isn't.
-      List<int> locs = new List<int>();
+      //List<int> locs = new List<int>();
       List<int> diffLocs = new List<int>();
       for (int i = 0; i < bytes1.Length; i++)
       {
@@ -172,7 +170,7 @@ namespace Patcher2
           case 2: // In block, Equals, Matched 8. (End of block.)
             diffCounter = 0;
             matchCounter = 0;
-            locs.Add(loc);
+            //locs.Add(loc);
             finds.Add(MakeUnique(ref bytes1, diffs.ToArray(), loc, diffLocs.ToArray()));
             diffs = new List<string[]>();
             break;
@@ -209,7 +207,7 @@ namespace Patcher2
       }
       if (diffCounter > 0)
       {
-        locs.Add(loc);
+        //locs.Add(loc);
         finds.Add(MakeUnique(ref bytes1, diffs.ToArray(), loc, diffLocs.ToArray()));
       }
       return finds.ToArray();
