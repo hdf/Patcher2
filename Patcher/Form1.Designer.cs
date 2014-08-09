@@ -120,6 +120,7 @@
       this.textBox4.Size = new System.Drawing.Size(252, 20);
       this.textBox4.TabIndex = 8;
       this.textBox4.Text = "41";
+      this.textBox4.TextChanged += new System.EventHandler(this.textBox4_TextChanged);
       // 
       // button2
       // 

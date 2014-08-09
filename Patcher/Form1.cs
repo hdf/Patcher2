@@ -139,6 +139,7 @@ namespace Patcher2
     private static string[] args;
     private static int isconsole = 0;
     private static List<string> seen = new List<string>();
+    private static string forTxtBox4;
 
     public Form1()
     {
@@ -192,6 +193,7 @@ namespace Patcher2
 
     private void button2_Click(object sender, EventArgs e)
     {
+      forTxtBox4 = "";
       textBox1.Text = textBox1.Text.Trim();
       if (textBox1.Text.EndsWith(_b, StringComparison.OrdinalIgnoreCase))
       {
@@ -201,6 +203,8 @@ namespace Patcher2
       }
       else if (doPatch(textBox1.Text, textBox2.Text, textBox3.Text, textBox4.Text))
         MessageBox.Show("All done.");
+      if (forTxtBox4.Length > 0)
+        textBox4.Text = forTxtBox4;
     }
 
     private void listBox1_SelectedIndexChanged(object sender, EventArgs e)
@@ -225,6 +229,18 @@ namespace Patcher2
       Form2 form2 = new Form2();
       form2.Prefix = _p;
       form2.Show(this);
+    }
+
+    private void textBox4_TextChanged(object sender, EventArgs e)
+    {
+      if (textBox4.Text.Length > 2 && textBox4.Text.Substring(0, 1) != "?" && textBox4.Text.Substring(2, 1) != " ")
+        button2.Enabled = false;
+      else
+        button2.Enabled = true;
+      if (textBox4.Text.Length == 0)
+        button2.Text = "Locate";
+      else
+        button2.Text = "Patch";
     }
 
     private void Form1_HelpButtonClicked(object sender, System.ComponentModel.CancelEventArgs e)
@@ -393,6 +409,53 @@ namespace Patcher2
       return Encoding.Default.GetString(dest.ToArray()).Split(new string[] { "\r\n" }, StringSplitOptions.None);
     }
 
+    private static bool findOnly(string file, ref string[] svals)
+    {
+      // I know, an ugly clone, but refactoring would not actually be very efficient here.
+      byte[] bytes;
+      if (file.Length > 5 && file.Substring(0, 5).ToLower() == _p)
+      {
+        string[] processName = file.Split(':');
+        Process proc;
+        if (processName.Length == 3)
+          proc = Process.GetProcessById(int.Parse(processName[2]));
+        else
+          proc = Process.GetProcessesByName(processName[1])[0];
+        file = proc.ProcessName;
+        IntPtr baseAddress = proc.MainModule.BaseAddress;
+        IntPtr moduleSize = (IntPtr)proc.MainModule.ModuleMemorySize;
+
+        IntPtr hProc = NativeMethods.OpenProcess(NativeMethods.ProcessAccessFlags.All, false, proc.Id);
+
+        // Read bytes
+        int bytesRead = 0;
+        bytes = new byte[moduleSize.ToInt32()];
+        if (!NativeMethods.ReadProcessMemory(hProc, baseAddress, bytes, moduleSize, ref bytesRead) || bytes == null)
+        {
+          NativeMethods.CloseHandle(hProc);
+          return false;
+        }
+        NativeMethods.CloseHandle(hProc);
+      }
+      else if (!File.Exists(file))
+      {
+        forTxtBox4 = "File not found.";
+        return false;
+      }
+      else
+        bytes = File.ReadAllBytes(file);
+
+      int[] locs = Patcher.BinaryPatternSearch(ref bytes, svals);
+
+      if (locs.Length == 1)
+        forTxtBox4 = string.Format("Pattern found at: {0}+{1:X6}", file, locs[0]);
+      else if (locs.Length == 0)
+        forTxtBox4 = "Pattern not found.";
+      else
+        forTxtBox4 = "Pattern not unique.";
+      return false;
+    }
+
     private static bool doPatch(string file, string search, string offset, string replace)
     {
       // Variable setup
@@ -403,6 +466,9 @@ namespace Patcher2
       replace = replace.Trim();
       string[] svals = search.Replace(_qq, _q).Replace(_ss, _q).Split(' ');
       string[] rvals = replace.Replace(_qq, _q).Replace(_ss, _q).Split(' ');
+
+      if (replace.Length == 0)
+        return findOnly(file, ref svals);
 
       // MemPatch! :) (Highly experimental!)
       if (file.Length > 5 && file.Substring(0, 5).ToLower() == _p)
