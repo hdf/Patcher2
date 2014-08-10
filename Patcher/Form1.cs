@@ -422,15 +422,11 @@ namespace Patcher2
         else
           proc = Process.GetProcessesByName(processName[1])[0];
         file = proc.ProcessName;
-        IntPtr baseAddress = proc.MainModule.BaseAddress;
-        IntPtr moduleSize = (IntPtr)proc.MainModule.ModuleMemorySize;
-
         IntPtr hProc = NativeMethods.OpenProcess(NativeMethods.ProcessAccessFlags.All, false, proc.Id);
-
         // Read bytes
         int bytesRead = 0;
-        bytes = new byte[moduleSize.ToInt32()];
-        if (!NativeMethods.ReadProcessMemory(hProc, baseAddress, bytes, moduleSize, ref bytesRead) || bytes == null)
+        bytes = new byte[proc.MainModule.ModuleMemorySize];
+        if (!NativeMethods.ReadProcessMemory(hProc, proc.MainModule.BaseAddress, bytes, (IntPtr)proc.MainModule.ModuleMemorySize, ref bytesRead) || bytes == null)
         {
           NativeMethods.CloseHandle(hProc);
           return false;
@@ -448,8 +444,8 @@ namespace Patcher2
       int[] locs = Patcher.BinaryPatternSearch(ref bytes, svals);
 
       if (locs.Length == 1)
-        forTxtBox4 = string.Format("Pattern found at: {0}+{1:X6}", file, locs[0]);
-      else if (locs.Length == 0)
+        forTxtBox4 = string.Format("Pattern found at: {0}+{1:X8}", file, locs[0]);
+      else if (locs.Length < 1)
         forTxtBox4 = "Pattern not found.";
       else
         forTxtBox4 = "Pattern not unique.";

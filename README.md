@@ -16,13 +16,13 @@ Replace is also a pattern, like search.<br>
 Offset means the offset compared to the beginning location, of where the pattern is found.<br>
 Offset can be negative, and is in base 10, while the patterns are in base 16.
 
+**Extra (hidden) features:**
+
 Has experimental, memory based pattern replace feature.<br>
 Compile for 64 bits, and it will work with 64 bit processes.<br>
-Writing "proc:" in to the file field, will bring up the process list window.
-
+(Can also patch itself to 64 bit. Just run self_to_64.bat in the Release directory. :) )<br>
+Writing "proc:" in to the file field, will bring up the process list window.<br>
 Leaving the replace field empty, will allow you to use the Locate feature.
-
-Can patch itself to 64 bit. Just run self_to_64.bat in the Release directory. :)
 
 ---
 
