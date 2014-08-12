@@ -224,6 +224,17 @@ namespace Patcher2
       return finds.ToArray();
     }
 
+    public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2)
+    {
+      int[] addressLocs = new int[] { };
+      if (File.Exists("BeaEngineCS" + ((IntPtr.Size == 8) ? "64" : "") + ".dll")) // If we have this dll, than let's use it.
+      {
+        addressLocs = GetLocs(ref bytes1); // Needed to do this, or there would be a problem at runtime if the dll is not found.
+        //File.WriteAllText("locs.txt", String.Join<int>("\n", addressLocs));
+      }
+      return FindDiffs(ref bytes1, ref bytes2, ref addressLocs);
+    }
+
     private static int[] GetLocs(ref byte[] bytes)
     {
       const string gz = ".gz";
@@ -266,17 +277,6 @@ namespace Patcher2
         //File.WriteAllBytes(cache, locs);
       }
       return addressLocs;
-    }
-
-    public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2)
-    {
-      int[] addressLocs = new int[] { };
-      if (File.Exists("BeaEngineCS" + ((IntPtr.Size == 8) ? "64" : "") + ".dll")) // If we have this dll, than let's use it.
-      {
-        addressLocs = GetLocs(ref bytes1); // Needed to do this, or there would be a problem at runtime if the dll is not found.
-        //File.WriteAllText("locs.txt", String.Join<int>("\n", addressLocs));
-      }
-      return FindDiffs(ref bytes1, ref bytes2, ref addressLocs);
     }
 
     private static string[][] MakeUnique(ref byte[] bytes, string[][] diffs, int loc, int[] diffLocs)
