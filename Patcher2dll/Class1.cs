@@ -299,44 +299,9 @@ namespace Patcher2
       List<string[]> newDiffs = new List<string[]>();
 
       // We trim both directions, until we get the smallest possible pattern.
-      List<string> leftBytes = new List<string>(extendLeft);
-      List<string> rightBytes = new List<string>(extendRight);
-      List<string> temp;
-      string[] lastGood = relevantBytes;
-      int off = extendLeft.Length - relevantBytes.Length;
-      bool flipper = false;
-
-      while (true)
-      {
-        flipper = !flipper;
-        if (flipper)
-        {
-        leftAgain: // Skip masks
-          if (leftBytes.Count <= relevantBytes.Length)
-            continue;
-          leftBytes.RemoveAt(0);
-          off--;
-          if (leftBytes[0] == _q)
-            goto leftAgain;
-        }
-        else
-        {
-        rightAgain: // Skip masks
-          if (rightBytes.Count <= relevantBytes.Length)
-            continue;
-          rightBytes.RemoveAt(rightBytes.Count - 1);
-          if (rightBytes[rightBytes.Count - 1] == _q)
-            goto rightAgain;
-        }
-        temp = leftBytes.GetRange(0, leftBytes.Count - relevantBytes.Length);
-        temp.AddRange(rightBytes);
-        if (BinaryPatternSearch(ref bytes, temp.ToArray()).Length > 1)
-          break;
-        lastGood = temp.ToArray();
-        //Console.WriteLine(String.Join(" ", lastGood));
-      }
-      newDiffs.Add(new string[] { off.ToString() });
-      relevantBytes = lastGood;
+      string[][] trimmed = patternTrim(ref bytes, ref relevantBytes, ref extendLeft, ref extendRight);
+      newDiffs.Add(new string[] { trimmed[1][0] });
+      relevantBytes = trimmed[0];
 
       /*
       // The shorter direction gets selected
@@ -395,6 +360,52 @@ namespace Patcher2
         if (locs.Length < 1)
           throw new WtfException("Pattern: " + String.Join(" ", newBlock) + " not found?");
       }
+    }
+
+    private static string[][] patternTrim(ref byte[] bytes, ref string[] relevantBytes, ref string[] extendLeft, ref string[] extendRight)
+    {
+      List<string> leftBytes = new List<string>(extendLeft);
+      List<string> rightBytes = new List<string>(extendRight);
+      List<string> temp;
+      string[] lastGood = relevantBytes;
+      int off = extendLeft.Length - relevantBytes.Length;
+      bool flipper = false;
+      int fault = 0;
+
+      while (true)
+      {
+        if (fault < 1)
+          flipper = !flipper;
+        if (flipper)
+        {
+        leftAgain: // Skip masks
+          if (leftBytes.Count <= relevantBytes.Length)
+            continue;
+          leftBytes.RemoveAt(0);
+          off--;
+          if (leftBytes[0] == _q)
+            goto leftAgain;
+        }
+        else
+        {
+        rightAgain: // Skip masks
+          if (rightBytes.Count <= relevantBytes.Length)
+            continue;
+          rightBytes.RemoveAt(rightBytes.Count - 1);
+          if (rightBytes[rightBytes.Count - 1] == _q)
+            goto rightAgain;
+        }
+        temp = leftBytes.GetRange(0, leftBytes.Count - relevantBytes.Length);
+        temp.AddRange(rightBytes);
+        if (BinaryPatternSearch(ref bytes, temp.ToArray()).Length > 1)
+          fault++;
+        else
+          lastGood = temp.ToArray();
+        if (fault > 1)
+          break;
+        //Console.WriteLine(String.Join(" ", lastGood));
+      }
+      return new string[][] { lastGood, new string[] { off.ToString() } };
     }
 
     private static string JaggedArray3ToString(ref string[][][] bytes)
