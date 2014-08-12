@@ -1,7 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Runtime.Serialization;
+using System.Security.Cryptography;
 
 namespace Patcher2
 {
@@ -141,7 +144,7 @@ namespace Patcher2
       return BinaryPatternReplace(ref bytes, new int[] { loc }, new string[][] { replaceBytes }, new int[] { 0 }, _q);
     }
 
-    public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2)
+    public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2, ref int[] addressLocs)
     {
       List<string[][]> finds = new List<string[][]>();
       List<string[]> diffs = new List<string[]>();
@@ -152,7 +155,7 @@ namespace Patcher2
       int state; // We only need 3 bits.
       int loc = 0; // Funny, how the compiler thinks this is necessary, but actually isn't.
       //List<int> locs = new List<int>();
-      List<int> diffLocs = new List<int>();
+      List<int> diffLocs = new List<int>(addressLocs);
       for (int i = 0; i < bytes1.Length; i++)
       {
         state = Convert.ToInt32(diffCounter == 0);            // If true, we are not in block.
@@ -179,18 +182,26 @@ namespace Patcher2
           //  goto default;
 
           case 4: // In block, Does not equal, Has not matched 8 yet. (Adding to block.)
-            for (int i2 = 0; i2 < matchCounter; i2++)
-              diffs.Add(new string[] { bytes1[i - matchCounter + i2].ToString(_h), _q });
+            if (diffLocs.IndexOf(i) != -1) // Address detection
+              for (int i2 = 0; i2 <= matchCounter; i2++)
+                diffs.Add(new string[] { _q, _q });
+            else
+            {
+              for (int i2 = 0; i2 < matchCounter; i2++)
+                diffs.Add(new string[] { bytes1[i - matchCounter + i2].ToString(_h), _q }); // Add not changed bytes masked
+              diffs.Add(new string[] { bytes1[i].ToString(_h), bytes2[i].ToString(_h) }); // Add new changed byte
+              diffLocs.Add(i);
+            }
             matchCounter = 0;
-            diffLocs.Add(i);
-            diffs.Add(new string[] { bytes1[i].ToString(_h), bytes2[i].ToString(_h) });
             break;
 
           case 5: // Not in block, Does not equal, Has not matched 8 yet. (Beginning of block.)
+            if (diffLocs.IndexOf(i) != -1) // Address detection
+              continue;
             loc = i;
-            diffLocs.Add(i);
             diffs.Add(new string[] { "0" });
             diffs.Add(new string[] { bytes1[i].ToString(_h), bytes2[i].ToString(_h) });
+            diffLocs.Add(i);
             diffCounter++;
             break;
 
@@ -213,6 +224,61 @@ namespace Patcher2
       return finds.ToArray();
     }
 
+    private static int[] GetLocs(ref byte[] bytes)
+    {
+      const string gz = ".gz";
+      int[] addressLocs = new int[] { };
+      uint[] rva = BeaEngineCS.masker.GetRVA(ref bytes);
+      //Console.WriteLine(rva[0] + " " + rva[1] + " + " + rva[2] + " = " + (rva[1] + rva[2]).ToString());
+      if (rva.Length < 3)
+        return addressLocs;
+      string cache = BitConverter.ToString(MD5.Create().ComputeHash(bytes)).Replace("-", "") + ".locs"; // Since disassembling is a bit slow, let's cache our results.
+      cache += (File.Exists(cache + gz)) ? gz : ""; // Use compression by default
+      byte[] locs;
+      if (File.Exists(cache))
+      {
+        if (cache.Substring(cache.Length - gz.Length) == gz) // Decompress
+        {
+          MemoryStream input = new MemoryStream(File.ReadAllBytes(cache));
+          MemoryStream dest = new MemoryStream();
+          (new GZipStream(input, CompressionMode.Decompress)).CopyTo(dest);
+          locs = dest.ToArray();
+        }
+        else
+          locs = File.ReadAllBytes(cache);
+        addressLocs = new int[locs.Length / 4];
+        for (int i = 0; i < locs.Length; i += 4)
+          addressLocs[i / 4] = BitConverter.ToInt32(locs, i);
+      }
+      else
+      {
+        addressLocs = BeaEngineCS.masker.GetAddressMaskLocs(ref bytes, rva);
+        locs = new byte[addressLocs.Length * 4];
+        for (int i = 0; i < locs.Length; i += 4)
+          Array.Copy(BitConverter.GetBytes(addressLocs[i / 4]), 0, locs, i, 4);
+        // Compress
+        cache += (cache.Substring(cache.Length - gz.Length) != gz) ? gz : ""; // Use compression by default
+        FileStream destOut = File.Create(cache);
+        GZipStream output = new GZipStream(destOut, CompressionMode.Compress);
+        output.Write(locs, 0, locs.Length);
+        output.Close();
+        destOut.Close();
+        //File.WriteAllBytes(cache, locs);
+      }
+      return addressLocs;
+    }
+
+    public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2)
+    {
+      int[] addressLocs = new int[] { };
+      if (File.Exists("BeaEngineCS" + ((IntPtr.Size == 8) ? "64" : "") + ".dll")) // If we have this dll, than let's use it.
+      {
+        addressLocs = GetLocs(ref bytes1); // Needed to do this, or there would be a problem at runtime if the dll is not found.
+        //File.WriteAllText("locs.txt", String.Join<int>("\n", addressLocs));
+      }
+      return FindDiffs(ref bytes1, ref bytes2, ref addressLocs);
+    }
+
     private static string[][] MakeUnique(ref byte[] bytes, string[][] diffs, int loc, int[] diffLocs)
     {
       string[] relevantBytes = new string[diffs.Length - 1];
@@ -231,6 +297,49 @@ namespace Patcher2
         return diffs;
       }
       List<string[]> newDiffs = new List<string[]>();
+
+      // We trim both directions, until we get the smallest possible pattern.
+      List<string> leftBytes = new List<string>(extendLeft);
+      List<string> rightBytes = new List<string>(extendRight);
+      List<string> temp;
+      string[] lastGood = relevantBytes;
+      int off = extendLeft.Length - relevantBytes.Length;
+      bool flipper = false;
+
+      while (true)
+      {
+        flipper = !flipper;
+        if (flipper)
+        {
+        leftAgain: // Skip masks
+          if (leftBytes.Count <= relevantBytes.Length)
+            continue;
+          leftBytes.RemoveAt(0);
+          off--;
+          if (leftBytes[0] == _q)
+            goto leftAgain;
+        }
+        else
+        {
+        rightAgain: // Skip masks
+          if (rightBytes.Count <= relevantBytes.Length)
+            continue;
+          rightBytes.RemoveAt(rightBytes.Count - 1);
+          if (rightBytes[rightBytes.Count - 1] == _q)
+            goto rightAgain;
+        }
+        temp = leftBytes.GetRange(0, leftBytes.Count - relevantBytes.Length);
+        temp.AddRange(rightBytes);
+        if (BinaryPatternSearch(ref bytes, temp.ToArray()).Length > 1)
+          break;
+        lastGood = temp.ToArray();
+        //Console.WriteLine(String.Join(" ", lastGood));
+      }
+      newDiffs.Add(new string[] { off.ToString() });
+      relevantBytes = lastGood;
+
+      /*
+      // The shorter direction gets selected
       if (extendLeft.Length <= extendRight.Length)
       {
         if (extendLeft.Length == 0)
@@ -251,6 +360,8 @@ namespace Patcher2
       newDiffs.Add(new string[] { "0" });
       relevantBytes = extendRight;
     finish:
+      */
+
       for (int i = 0; i < relevantBytes.Length; i++)
         newDiffs.Add(new string[] { relevantBytes[i], (diffs.Length > i + 1) ? diffs[i + 1][1] : "" });
       return newDiffs.ToArray();
@@ -270,12 +381,10 @@ namespace Patcher2
           return new string[] { };
         loc += direction;
         currByte = bytes[loc].ToString(_h);
+        if (Array.IndexOf(diffLocs, loc) != -1) // Overlap detection
+          currByte = _q;
         if (direction == -1)
-        {
-          if (Array.IndexOf(diffLocs, loc) != -1) // Overlap detection
-            currByte = _q;
           newBlock.Insert(0, currByte);
-        }
         else
           newBlock.Add(currByte);
         if (currByte == _q)

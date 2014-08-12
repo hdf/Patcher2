@@ -26,5 +26,24 @@ Leaving the replace field empty, will allow you to use the Locate feature.
 
 ---
 
+### BeaEngineCS optional extension project is:
+
+**Based on:**
+
+PE file header stuff: http://sandsprite.com/CodeStuff/PEOFFSETCALC.cs<br>
+BeaEngineCS: https://github.com/carterjones/beaengine-cs
+
+**Using:**
+
+BeaEngine: disassembler library for x86 x86-64 (IA32 and Intel64)<br>
+http://www.beaengine.org/
+
+**Notes:**
+
+Have BeaEngineCS(64).dll (and BeaEngineCheetah(64).dll as well of course) in the folder, to use it's disassembly based address masking features,
+when creating a difference based patch with the "m" command line option. It will make the process MUCH slower.
+
+---
+
 **License:**<br>
 LGPL (<http://wikipedia.org/wiki/GNU_Lesser_General_Public_License>)

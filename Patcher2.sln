@@ -7,26 +7,30 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Patcher2", "Patcher\Patcher
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Patcher2Dll", "Patcher2dll\Patcher2Dll.csproj", "{F14833F9-C30C-47BB-AB37-C322B83006D4}"
+	ProjectSection(ProjectDependencies) = postProject
+		{C8241D75-0AA1-419D-A423-175FB36E4E34} = {C8241D75-0AA1-419D-A423-175FB36E4E34}
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BeaEngineCS", "BeaEngineCS\BeaEngineCS.csproj", "{C8241D75-0AA1-419D-A423-175FB36E4E34}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 		Release64|Any CPU = Release64|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{8D2721AE-76D6-4000-8087-D7E085AB2CF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{8D2721AE-76D6-4000-8087-D7E085AB2CF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D2721AE-76D6-4000-8087-D7E085AB2CF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D2721AE-76D6-4000-8087-D7E085AB2CF0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{8D2721AE-76D6-4000-8087-D7E085AB2CF0}.Release64|Any CPU.ActiveCfg = Release64|Any CPU
 		{8D2721AE-76D6-4000-8087-D7E085AB2CF0}.Release64|Any CPU.Build.0 = Release64|Any CPU
-		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Release|Any CPU.Build.0 = Release|Any CPU
-		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Release64|Any CPU.ActiveCfg = Release|Any CPU
-		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Release64|Any CPU.Build.0 = Release|Any CPU
+		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Release64|Any CPU.ActiveCfg = Release64|Any CPU
+		{F14833F9-C30C-47BB-AB37-C322B83006D4}.Release64|Any CPU.Build.0 = Release64|Any CPU
+		{C8241D75-0AA1-419D-A423-175FB36E4E34}.Release|Any CPU.ActiveCfg = Release|x86
+		{C8241D75-0AA1-419D-A423-175FB36E4E34}.Release|Any CPU.Build.0 = Release|x86
+		{C8241D75-0AA1-419D-A423-175FB36E4E34}.Release64|Any CPU.ActiveCfg = Release|x64
+		{C8241D75-0AA1-419D-A423-175FB36E4E34}.Release64|Any CPU.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
