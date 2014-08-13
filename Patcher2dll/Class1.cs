@@ -366,9 +366,11 @@ namespace Patcher2
     {
       List<string> leftBytes = new List<string>(extendLeft);
       List<string> rightBytes = new List<string>(extendRight);
+      List<string> tempBytes = new List<string>();
       List<string> temp;
       string[] lastGood = relevantBytes;
       int off = extendLeft.Length - relevantBytes.Length;
+      int lastGoodOff = off;
       bool flipper = false;
       int fault = 0;
 
@@ -381,6 +383,7 @@ namespace Patcher2
         leftAgain: // Skip masks
           if (leftBytes.Count <= relevantBytes.Length)
             continue;
+          tempBytes = leftBytes;
           leftBytes.RemoveAt(0);
           off--;
           if (leftBytes[0] == _q)
@@ -391,6 +394,7 @@ namespace Patcher2
         rightAgain: // Skip masks
           if (rightBytes.Count <= relevantBytes.Length)
             continue;
+          tempBytes = rightBytes;
           rightBytes.RemoveAt(rightBytes.Count - 1);
           if (rightBytes[rightBytes.Count - 1] == _q)
             goto rightAgain;
@@ -398,14 +402,30 @@ namespace Patcher2
         temp = leftBytes.GetRange(0, leftBytes.Count - relevantBytes.Length);
         temp.AddRange(rightBytes);
         if (BinaryPatternSearch(ref bytes, temp.ToArray()).Length > 1)
+        {
+          if (fault < 1) // Restore last byte if it's first offence
+          {
+            if (flipper)
+            {
+              leftBytes = tempBytes;
+              off++;
+            }
+            else
+              rightBytes = tempBytes;
+            flipper = !flipper;
+          }
           fault++;
+        }
         else
+        {
+          lastGoodOff = off;
           lastGood = temp.ToArray();
+        }
         if (fault > 1)
           break;
-        //Console.WriteLine(String.Join(" ", lastGood));
+        //Console.WriteLine(String.Join(" ", lastGood) + " | " + lastGoodOff.ToString());
       }
-      return new string[][] { lastGood, new string[] { off.ToString() } };
+      return new string[][] { lastGood, new string[] { lastGoodOff.ToString() } };
     }
 
     private static string JaggedArray3ToString(ref string[][][] bytes)
