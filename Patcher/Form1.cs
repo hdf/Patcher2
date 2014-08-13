@@ -442,14 +442,14 @@ namespace Patcher2
       else
         bytes = File.ReadAllBytes(file);
 
-      int[] locs = Patcher.BinaryPatternSearch(ref bytes, svals);
+      int[] locs = Patcher.BinaryPatternSearch(ref bytes, svals, false);
 
       if (locs.Length == 1)
         forTxtBox4 = string.Format("Pattern found at: {0}+{1:X8}", file, locs[0]);
       else if (locs.Length < 1)
         forTxtBox4 = "Pattern not found.";
       else
-        forTxtBox4 = "Pattern not unique.";
+        forTxtBox4 = locs.Length.ToString() + " occurrences found.";
       return false;
     }
 
