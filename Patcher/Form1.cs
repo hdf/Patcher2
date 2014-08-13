@@ -249,7 +249,7 @@ namespace Patcher2
       e.Cancel = true;
     }
 
-    private void manageConsole()
+    private void manageConsole() // Using console as GUI app is a nightmare.
     {
       try
       {
@@ -578,7 +578,7 @@ namespace Patcher2
       {
         for (int i = 0; i < seen.Count; i++)
           if (file == seen[i])
-            return 0;
+            return 0; // Restore already ran on this file.
         seen.Add(file);
       }
       if (File.Exists(file + _b))

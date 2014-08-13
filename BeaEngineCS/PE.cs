@@ -168,7 +168,7 @@ namespace BeaEngineCS
       return RvaToOffset(rva, ref s);
     }
 
-    public static uint[] RvaToOffset(uint rva, ref string sectionName)
+    public static uint[] RvaToOffset(uint rva, ref string sectionName) // Returns: Entry point pointer, section start, and section size
     {
       for (int i = 0; i < section.Length; i++)
       {
@@ -186,7 +186,7 @@ namespace BeaEngineCS
       return new uint[] { };
     }
 
-    public static uint OffsetToRVA(uint foffset)
+    /*public static uint OffsetToRVA(uint foffset)
     {
       string s = "";
       return OffsetToRVA(foffset, ref s);
@@ -211,6 +211,6 @@ namespace BeaEngineCS
         }
       }
       return 0;
-    }
+    }*/
   }
 }

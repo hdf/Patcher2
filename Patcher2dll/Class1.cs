@@ -235,9 +235,10 @@ namespace Patcher2
       return FindDiffs(ref bytes1, ref bytes2, ref addressLocs);
     }
 
-    private static int[] GetLocs(ref byte[] bytes)
+    private static int[] GetLocs(ref byte[] bytes) // Returns: list of address byte locations
     {
       const string gz = ".gz";
+      //string tmp = Path.GetTempPath();
       int[] addressLocs = new int[] { };
       uint[] rva = BeaEngineCS.masker.GetRVA(ref bytes);
       //Console.WriteLine(rva[0] + " " + rva[1] + " + " + rva[2] + " = " + (rva[1] + rva[2]).ToString());
@@ -302,7 +303,6 @@ namespace Patcher2
       string[][] trimmed = patternTrim(ref bytes, ref relevantBytes, ref extendLeft, ref extendRight);
       newDiffs.Add(new string[] { trimmed[1][0] });
       relevantBytes = trimmed[0];
-
       /*
       // The shorter direction gets selected
       if (extendLeft.Length <= extendRight.Length)
@@ -326,7 +326,6 @@ namespace Patcher2
       relevantBytes = extendRight;
     finish:
       */
-
       for (int i = 0; i < relevantBytes.Length; i++)
         newDiffs.Add(new string[] { relevantBytes[i], (diffs.Length > i + 1) ? diffs[i + 1][1] : "" });
       return newDiffs.ToArray();

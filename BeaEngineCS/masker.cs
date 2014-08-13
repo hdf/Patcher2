@@ -6,7 +6,7 @@ namespace BeaEngineCS
 {
   public static class masker
   {
-    public static uint[] GetRVA(ref byte[] bytes)
+    public static uint[] GetRVA(ref byte[] bytes) // Returns: Entry point pointer, section start, and section size
     {
       Stream s = new MemoryStream(bytes);
       PeHeader.IMAGE_DOS_HEADER idh = PeHeader.ReadStruct<PeHeader.IMAGE_DOS_HEADER>(s);
@@ -29,7 +29,7 @@ namespace BeaEngineCS
       return GetAddressMaskLocs(ref bytes, GetRVA(ref bytes));
     }
 
-    public static int[] GetAddressMaskLocs(ref byte[] bytes, uint[] rva)
+    public static int[] GetAddressMaskLocs(ref byte[] bytes, uint[] rva) // Returns: list of address byte locations
     {
       if (rva.Length < 3)
         return new int[] { };
@@ -38,7 +38,7 @@ namespace BeaEngineCS
       BeaEngine._Disasm disasm = new BeaEngine._Disasm();
       ulong begin = (ulong)buffer.Ptr.ToInt64();
       ulong end = begin + (ulong)(rva[1] + rva[2]);
-      disasm.InstructionPointer = (UIntPtr)(begin + rva[1]);
+      disasm.InstructionPointer = (UIntPtr)(begin + rva[1]); // We start from section start, rather than entry point
       int result, off, n;
 
       List<int> locs = new List<int>();
