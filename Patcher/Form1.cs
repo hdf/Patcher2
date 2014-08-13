@@ -223,6 +223,7 @@ namespace Patcher2
         button2.Text = "Restore";
       else
         button2.Text = "Patch";
+      textBox4_TextChanged(sender, e);
 
       if (textBox1.Text.ToLower() != _p)
         return;
