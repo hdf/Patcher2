@@ -367,6 +367,7 @@ namespace Patcher2
       List<string> rightBytes = new List<string>(extendRight);
       List<string> tempBytes = new List<string>();
       List<string> temp;
+      string[] tempArray;
       string[] lastGood = relevantBytes;
       int off = extendLeft.Length - relevantBytes.Length;
       int lastGoodOff = off;
@@ -375,13 +376,18 @@ namespace Patcher2
 
       while (true)
       {
+        if (fault > 1)
+          break;
         if (fault < 1)
           flipper = !flipper;
         if (flipper)
         {
         leftAgain: // Skip masks
           if (leftBytes.Count <= relevantBytes.Length)
+          {
+            fault++;
             continue;
+          }
           tempBytes = leftBytes;
           leftBytes.RemoveAt(0);
           off--;
@@ -392,7 +398,10 @@ namespace Patcher2
         {
         rightAgain: // Skip masks
           if (rightBytes.Count <= relevantBytes.Length)
+          {
+            fault++;
             continue;
+          }
           tempBytes = rightBytes;
           rightBytes.RemoveAt(rightBytes.Count - 1);
           if (rightBytes[rightBytes.Count - 1] == _q)
@@ -400,7 +409,8 @@ namespace Patcher2
         }
         temp = leftBytes.GetRange(0, leftBytes.Count - relevantBytes.Length);
         temp.AddRange(rightBytes);
-        if (BinaryPatternSearch(ref bytes, temp.ToArray()).Length > 1)
+        tempArray = temp.ToArray();
+        if (BinaryPatternSearch(ref bytes, tempArray).Length > 1)
         {
           if (fault < 1) // Restore last byte if it's first offence
           {
@@ -418,10 +428,8 @@ namespace Patcher2
         else
         {
           lastGoodOff = off;
-          lastGood = temp.ToArray();
+          lastGood = tempArray;
         }
-        if (fault > 1)
-          break;
         //Console.WriteLine(String.Join(" ", lastGood) + " | " + lastGoodOff.ToString());
       }
       return new string[][] { lastGood, new string[] { lastGoodOff.ToString() } };
