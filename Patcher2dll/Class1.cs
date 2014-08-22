@@ -449,8 +449,7 @@ namespace Patcher2
           if (bytes[i][i2].Length > 1)
             line[1] += bytes[i][i2][1] + " ";
         }
-        //ret += line[0].Trim() + nl + "Offset:     " + bytes[i][0][0] + nl + line[1].Trim() + nl;
-        ret += line[0].Trim() + nl + bytes[i][0][0] + nl + line[1].Trim() + nl;
+        ret += line[0].Trim() + nl + bytes[i][0][0] + nl + line[1].TrimEnd(new char[] { '?', ' ' }) + nl;
       }
       return ret;
     }
