@@ -40,6 +40,7 @@ namespace Patcher2
     private const string _q = "?";
     private const string nl = "\r\n";
     private const string _h = "X2";
+    private const string gz = ".gz";
 
     public static int[] BinaryPatternSearch(ref byte[] bytes, string[] searchBytes, string wildcard, bool onlyOne)
     {
@@ -227,28 +228,12 @@ namespace Patcher2
     public static string[][][] FindDiffs(ref byte[] bytes1, ref byte[] bytes2)
     {
       int[] addressLocs = new int[] { };
-      if (File.Exists("BeaEngineCS" + ((IntPtr.Size == 8) ? "64" : "") + ".dll")) // If we have this dll, than let's use it.
-      {
-        addressLocs = GetLocs(ref bytes1); // Needed to do this, or there would be a problem at runtime if the dll is not found.
-        //File.WriteAllText("locs.txt", String.Join<int>("\n", addressLocs));
-      }
-      return FindDiffs(ref bytes1, ref bytes2, ref addressLocs);
-    }
-
-    private static int[] GetLocs(ref byte[] bytes) // Returns: list of address byte locations
-    {
-      const string gz = ".gz";
       //string tmp = Path.GetTempPath();
-      int[] addressLocs = new int[] { };
-      uint[] rva = BeaEngineCS.masker.GetRVA(ref bytes);
-      //Console.WriteLine(rva[0] + " " + rva[1] + " + " + rva[2] + " = " + (rva[1] + rva[2]).ToString());
-      if (rva.Length < 3)
-        return addressLocs;
-      string cache = BitConverter.ToString(MD5.Create().ComputeHash(bytes)).Replace("-", "") + ".locs"; // Since disassembling is a bit slow, let's cache our results.
+      string cache = BitConverter.ToString(MD5.Create().ComputeHash(bytes1)).Replace("-", "") + ".locs"; // Since disassembling is a bit slow, let's cache our results.
       cache += (File.Exists(cache + gz)) ? gz : ""; // Use compression by default
-      byte[] locs;
       if (File.Exists(cache))
       {
+        byte[] locs;
         if (cache.Substring(cache.Length - gz.Length) == gz) // Decompress
         {
           MemoryStream input = new MemoryStream(File.ReadAllBytes(cache));
@@ -262,21 +247,30 @@ namespace Patcher2
         for (int i = 0; i < locs.Length; i += 4)
           addressLocs[i / 4] = BitConverter.ToInt32(locs, i);
       }
-      else
-      {
-        addressLocs = BeaEngineCS.masker.GetAddressMaskLocs(ref bytes, rva);
-        locs = new byte[addressLocs.Length * 4];
-        for (int i = 0; i < locs.Length; i += 4)
-          Array.Copy(BitConverter.GetBytes(addressLocs[i / 4]), 0, locs, i, 4);
-        // Compress
-        cache += (cache.Substring(cache.Length - gz.Length) != gz) ? gz : ""; // Use compression by default
-        FileStream destOut = File.Create(cache);
-        GZipStream output = new GZipStream(destOut, CompressionMode.Compress);
-        output.Write(locs, 0, locs.Length);
-        output.Close();
-        destOut.Close();
-        //File.WriteAllBytes(cache, locs);
-      }
+      else if (File.Exists("BeaEngineCS" + ((IntPtr.Size == 8) ? "64" : "") + ".dll")) // If we have this dll, than let's use it.
+        addressLocs = GetLocs(ref bytes1, cache); // Needed to do this, or there would be a problem at runtime if the dll is not found.
+      return FindDiffs(ref bytes1, ref bytes2, ref addressLocs);
+    }
+
+    private static int[] GetLocs(ref byte[] bytes, string cache) // Returns: list of address byte locations
+    {
+      int[] addressLocs = new int[] { };
+      uint[] rva = BeaEngineCS.masker.GetRVA(ref bytes);
+      //Console.WriteLine(rva[0] + " " + rva[1] + " + " + rva[2] + " = " + (rva[1] + rva[2]).ToString());
+      if (rva.Length < 3)
+        return addressLocs;
+      addressLocs = BeaEngineCS.masker.GetAddressMaskLocs(ref bytes, rva);
+      byte[] locs = new byte[addressLocs.Length * 4];
+      for (int i = 0; i < locs.Length; i += 4)
+        Array.Copy(BitConverter.GetBytes(addressLocs[i / 4]), 0, locs, i, 4);
+      // Compress
+      cache += (cache.Substring(cache.Length - gz.Length) != gz) ? gz : ""; // Use compression by default
+      FileStream destOut = File.Create(cache);
+      GZipStream output = new GZipStream(destOut, CompressionMode.Compress);
+      output.Write(locs, 0, locs.Length);
+      output.Close();
+      destOut.Close();
+      //File.WriteAllBytes(cache, locs);
       return addressLocs;
     }
 
@@ -439,6 +433,7 @@ namespace Patcher2
     {
       string ret = "";
       string[] line;
+      char[] toTrim = new char[] { _q[0], ' ' };
       for (int i = 0; i < bytes.Length; i++)
       {
         //line = new string[2] { "Search:   ", "Replace: " };
@@ -449,7 +444,7 @@ namespace Patcher2
           if (bytes[i][i2].Length > 1)
             line[1] += bytes[i][i2][1] + " ";
         }
-        ret += line[0].Trim() + nl + bytes[i][0][0] + nl + line[1].TrimEnd(new char[] { '?', ' ' }) + nl;
+        ret += line[0].Trim() + nl + bytes[i][0][0] + nl + line[1].TrimEnd(toTrim) + nl;
       }
       return ret;
     }
