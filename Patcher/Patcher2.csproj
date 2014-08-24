@@ -157,6 +157,7 @@ if "$(ConfigurationName)" == "Release64" (
   move /Y Release64\$(TargetFileName) Release\$(TargetName)_64.exe
   move /Y Release64\$(TargetName).pdb Release\$(TargetName)_64.pdb
   rd /s /q Release64
+  move /Y $(SolutionDir)BeaEngineCS\bin\Release\* Release\
 )</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

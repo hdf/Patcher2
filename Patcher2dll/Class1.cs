@@ -197,11 +197,12 @@ namespace Patcher2
             break;
 
           case 5: // Not in block, Does not equal, Has not matched 8 yet. (Beginning of block.)
-            if (diffLocs.IndexOf(i) != -1) // Address detection
-              continue;
             loc = i;
             diffs.Add(new string[] { "0" });
-            diffs.Add(new string[] { bytes1[i].ToString(_h), bytes2[i].ToString(_h) });
+            if (diffLocs.IndexOf(i) != -1) // Address detection
+              diffs.Add(new string[] { _q, bytes2[i].ToString(_h) });
+            else
+              diffs.Add(new string[] { bytes1[i].ToString(_h), bytes2[i].ToString(_h) });
             diffLocs.Add(i);
             diffCounter++;
             break;
