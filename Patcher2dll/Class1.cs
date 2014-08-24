@@ -185,7 +185,7 @@ namespace Patcher2
           case 4: // In block, Does not equal, Has not matched 8 yet. (Adding to block.)
             if (diffLocs.IndexOf(i) != -1) // Address detection
               for (int i2 = 0; i2 <= matchCounter; i2++)
-                diffs.Add(new string[] { _q, _q });
+                diffs.Add(new string[] { _q, bytes2[i - matchCounter + i2].ToString(_h) });
             else
             {
               for (int i2 = 0; i2 < matchCounter; i2++)
