@@ -234,16 +234,14 @@ namespace Patcher2
       cache += (File.Exists(cache + gz)) ? gz : ""; // Use compression by default
       if (File.Exists(cache))
       {
-        byte[] locs;
+        byte[] locs = File.ReadAllBytes(cache);
         if (cache.Substring(cache.Length - gz.Length) == gz) // Decompress
         {
-          MemoryStream input = new MemoryStream(File.ReadAllBytes(cache));
+          MemoryStream input = new MemoryStream(locs);
           MemoryStream dest = new MemoryStream();
           (new GZipStream(input, CompressionMode.Decompress)).CopyTo(dest);
           locs = dest.ToArray();
         }
-        else
-          locs = File.ReadAllBytes(cache);
         addressLocs = new int[locs.Length / 4];
         for (int i = 0; i < locs.Length; i += 4)
           addressLocs[i / 4] = BitConverter.ToInt32(locs, i);
